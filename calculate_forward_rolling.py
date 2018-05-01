@@ -1,12 +1,21 @@
-"""Pandas's rolling() function works only backwards, you can set the right end (or the center) of the windows, but not the left end. If you want to calculate a forward rolling() statistics i.e. the sum(), you will need to do some tricks. 
+"""Pandas's rolling() function works only backwards, you can set the right end (or the center) of the windows, 
+but not the left end. If you want to calculate a forward rolling() statistics i.e. the sum(), you will need 
+to do some tricks. 
 
-Method-1: calculate the rolling in the regular backward way and then assign the values to .shift(1-d) where d is the window size. the problem for this approach is the last (d-1) rows will have NaN values since the dates required for calculation cross the existing date range boundary. 
+Method-1: 
+    Calculate the rolling in the regular backward way and then assign the values to .shift(1-d) where 
+    'd' is the window size. the problem for this approach is the last (d-1) rows will have NaN values 
+    since the dates required for calculation cross the existing date range boundary. 
 
-One solution for this is to reindex() the dataframe by extending the existing date_range (as index) to include the extra d-size window using the pd_date_range function and fill the NaNs which best fit the application's logic.
+    One solution for this is to reindex() the dataframe by extending the existing date_range (as index) to 
+    include the extra d-size window using the pd_date_range function and fill the NaNs which best fit the 
+    application's logic. Using reindex() has another benefit in solving the potential missing date issues 
+    which shift() function can not identify.
 
-Using reindex() has another benefit in solving the potential missing date issues which shift() function can not identify.
-
-Method-2: reverse the date field and calculate the regular backward rolling and then flip it back. The problems is that rolling only support a window based on number of records, not a datetime delta. you will have to make sure the dates are continue and without gap. 
+Method-2: 
+    Reverse the date field and calculate the regular backward rolling and then flip it back. 
+    The problems is that rolling only support a window based on number of records, not a datetime delta. 
+    you will have to make sure the dates are continue and without gap. 
 
 In the following stackoverflow case, OP wanted to check visiting status (True/False) in the next `d` days' window. 
 
@@ -89,8 +98,3 @@ for d, d_name in [ (2, '1d') , (3, '2d'), (7, '6d'), (30, '1m') ]:
 mydf.reset_index(inplace=True)
 
 print(mydf)
-
-"""Note:
-* If the next 1 day does not include today, thus when d_name == 'id', d == 1, then you can adjust the shift(1-d) to shift(-d)
-* date field must be unique for each ID, or you will not be able to set_index()
-"""
