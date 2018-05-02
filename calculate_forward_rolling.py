@@ -60,7 +60,7 @@ def flag_visits_1(grps, d, d_name):
     """Loop through each group and extend the index to 'd' more days from
        df_grp.index.max(). fill the NaN values with *False*
        this is needed to retrieve the forward rolling stats when running shift(1-d)
-       reindex() can also fix potential missing date issues which shift() can't cover
+       reindex() can also fix potential missing date issues 
     """
     for id, df_grp in grps:
         # create the new index to cover all days required in calculation
