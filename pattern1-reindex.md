@@ -29,7 +29,7 @@ df.set_index('date_field').reindex(drange)
 ```
 All missing data will have NaN in the output.
 
-** Note:** For pivot-like function to work, you will need to convert the column to
+**Note:** For pivot-like function to work, you will need to convert the column to
 a user-predefined `category` type, for example:
 ```
     ctype = pd.api.types.CategoricalDType(categories=["M", "F"], ordered=True)
