@@ -10,7 +10,7 @@ REF: [A post by piRSquared @ stackoverflow](https://stackoverflow.com/questions/
 
 The solution from piRSquared can be extended into more use cases:
 
-#### Convert Python dictionary into columns ####
+### Convert Python dictionary into columns ###
 [An example from stackoverflow](https://stackoverflow.com/questions/50161070/convert-list-of-dicts-of-dict-into-dataframe)
 , see below data frame where column-b contains a Python dictionary, user wanted to convert them into 
 columns
@@ -33,7 +33,7 @@ Out[111]:
 
 ```
 
-#### Convert string of dictionary into columns ####
+### Convert string of dictionary into columns ###
 If the above json code is a string, not a Python data structure
 ```
 In [112]: df
@@ -60,7 +60,7 @@ Out[114]:
 * the outside bracket in `[ json.loads(b) ]` is to make all dict key/value pairs in one record 'B'
 thus they wont sent to the next rows.
 
-#### Split text into rows ####
+### Split text into rows ###
 below user wanted to convert `AL;LO` into two separated rows
 ```
 In [115]: df 
@@ -81,7 +81,7 @@ Out[116]:
 4  b1d  ixl  Lo
 ```
 
-#### Split text into columns: ####
+### Split text into columns: ###
 Simliar to Series.str.split('|', expand=True), users want to split one column text and put them 
 into separate columns
 ```
