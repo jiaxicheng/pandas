@@ -1,4 +1,4 @@
-## Time Intelligence for BI reports ##
+# Time Intelligence for BI reports #
 
 There are many useful Pandas tools to calculate some frequently-used time-intelligent functions:
 
@@ -6,7 +6,7 @@ There are many useful Pandas tools to calculate some frequently-used time-intell
 + Manipulate the properties of datetime columns: i.e. df[date_col].dt.month
 + pandas.IntervalIndex is very useful when creating discontinuous date ranges
 
-### Monthly Based ###
+## Monthly Based ##
 
 MTD for every month of a specific year.
 ```
@@ -75,7 +75,7 @@ df.query('date.dt.day <= @this_day & date.dt.month == @this_month').groupby(df.d
 **Note:** with pd.IntervalIndex, you can manually create any date ranges, for example, organize them
 into list of tuples, and then create the bins with pd.IntervalIndex.
 
-# Monthly, but the start/end date can be any day in a month.
+### Monthly, but the start/end date can be any day in a month. ###
 ```
 bins = [ d.replace(day=this_day) for d in pd.date_range(start=start_date, end=end_date, freq='MS') ]
 
@@ -95,7 +95,7 @@ date
 (2017-11-19, 2017-12-19]    -4.689270
 ```
 
-### Yearly and Quarterly Based ###
+## Yearly and Quarterly Based ##
 YTD comparison for the past few years
 ```
 df1 = pd.DataFrame({
@@ -141,7 +141,7 @@ date
 
 ```
 
-### Weekly Based ###
+## Weekly Based ##
 
 WTD in the past 3 weeks, the target is to compare the weekly-wise result horizontally
 ```
