@@ -76,10 +76,11 @@ idx = sorted(set([*df.index.tolist(), *df.dt_new.tolist()]))
 # reindex the original dataframe and set NULL `value` to zero
 # this is now in monotonically incresing order with all needed datetimes
 # calculate the rolling (backward) sum with all the new data and save the result to a new dataframe df1
-# make sure the folling has closed='left', default is 'right' for the backward rolling
+# make sure the rolling window has closed='left', default is 'right' for the backward rolling
 df1 = df.reindex(idx).fillna(value={'value':0}).value.rolling(offset, closed='left').sum().to_frame()
 
 # make a LEFT join with the original df and the new df1 using df.dt_new = df1.index
+# value_y should be the 'forward' rolling sum()
 df2 = df.merge(df1, left_on='dt_new', right_index=True, how='left')
 
 print(df2)
@@ -125,7 +126,8 @@ print(df2)
   number, the deault closed is 'both'.
 
 + The index (dtime field) should not contain duplicates, if not, idx should be de-duplicated 
-  based on two fields (dtime, value).
+  based on two fields (dtime, value) <-- [UPDATE]: this is not enough if `value` also the same
+  you will need extra logic to prevent the original rows discarded by accident.
 
 **Potential issues:**
 
