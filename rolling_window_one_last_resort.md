@@ -37,7 +37,7 @@ df['rolling_std'] = df['rolling_mean'] = np.nan
 # calculate std, mean based on a slice of df containing only required indies, see below idx
 for row in df.itertuples():
     idx = (df.index != row.Index) & (df.index - row.Index <= window) & (row.Index - df.index <= window)
-    df.loc[row.Index][["rolling_std", "rolling_mean"]] = df.loc[idx]["value"].agg(['std', 'mean'])
+    df.loc[row.Index, ["rolling_std", "rolling_mean"]] = df.loc[idx, "value"].agg(['std', 'mean']).values
 ```
 
 df.itertuples() is much slower than df.apply() and vectorization methods with Pandas like rolling() etc. 
