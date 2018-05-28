@@ -7,8 +7,8 @@ REF:https://stackoverflow.com/questions/50528475/tricky-slicing-specifications-o
 Pandas's pandas.tseries.offsets library provides many helpful functions to manipulate such datetime
 offset. 
 
-Besides BDay() which identify business days as Monday through Friday which does not exclude holidays,
-Pandas also provides CustomBusinessDay() to calculate offset based on user-defined list of holidays and
+Besides BDay() which identify business days as Monday through Friday but does not exclude holidays,
+Pandas also provides CustomBusinessDay() to calculate offsets based on user-defined list of holidays and
 weekmask.
 
 Useful parameters for CustomBusinessDay()
