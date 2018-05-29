@@ -116,6 +116,14 @@ print(df2)
 #2018-04-23 06:45:16.918    -0.01 2018-04-23 06:45:16.928    -0.15
 #2018-04-23 06:45:16.919    -0.03 2018-04-23 06:45:16.929    -0.14
 #2018-04-23 06:45:16.920    -0.11 2018-04-23 06:45:16.930    -0.11
+
+# If you are questioning the pd.join() based on datetime fields (i.e. floating number issues)
+# you can also use the pd.merge_asof() function which make a left join based on the keys
+# with direction='nearest' values (can also be forward, backward etc)
+# Note: left key must be in monotonically incresing order. 
+df3 = pd.merge_asof(df, df1, left_on='dt_new', right_index=True, direction='nearest')
+
+
 """
 **Some Notes:**
 
@@ -133,6 +141,7 @@ print(df2)
 
 + The reindex() could potentially double the number of rows at the worst scenario.
 + Join dataframes by using a datetime field, this might not work on every system if the datetimes 
-  are saved as floating number.
+  are saved as floating number. **Note:** this issue can be resolved by using pd.merge_asof() 
+  with the option direction='nearest'
 """
 
