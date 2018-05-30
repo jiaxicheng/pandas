@@ -36,4 +36,12 @@ a user-predefined `category` type, for example:
     df['field'] = df['field'].astype(ctype)
 ```
 
+**Limitations:**
+
++ index could not contain duplicate values, otherwise, a ValueError will be raised!
+  This applies also to its sibling function: `asfreq()`
+```
+ValueError: cannot reindex from a duplicate axis
+```
+
 REF: [https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885](https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885)
