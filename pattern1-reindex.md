@@ -44,7 +44,7 @@ a user-predefined `category` type, for example:
 ValueError: cannot reindex from a duplicate axis
 ```
 
-## reindex used on the columns level ##
+## reindex() on the column level ##
 
 Below is an example adding calculated fields into a pivot_table using reindex() and multiIndex
 referencing:
@@ -65,8 +65,10 @@ Amex     D        2017-12       3476
 Visa     D        2017-11       3486
 """
 
+# read sample data into a dataframe
 df = pd.read_table(StringIO(str), sep='\s+')
 
+# create a pivot table
 df1 = df.pivot_table(index='card', columns=['trans_month', 'auth'],values='order_number', aggfunc='count')
 print(df1)
 
