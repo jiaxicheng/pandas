@@ -44,4 +44,79 @@ a user-predefined `category` type, for example:
 ValueError: cannot reindex from a duplicate axis
 ```
 
-REF: [https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885](https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885)
+## reindex used on the columns level ##
+
+Below is an example adding calculated fields into a pivot_table using reindex() and multiIndex
+referencing:
+
+```
+import pandas as pd
+from io import StringIO
+
+str="""card    auth   trans_month   order_number
+Amex     A        2017-11       1234
+Visa     A        2017-12       2345
+Amex     D        2017-12       3416
+MC       A        2017-12       3426
+Visa     A        2017-11       3436
+Amex     D        2017-12       3446
+Visa     A        2017-11       3466
+Amex     D        2017-12       3476
+Visa     D        2017-11       3486
+"""
+
+df = pd.read_table(StringIO(str), sep='\s+')
+
+df1 = df.pivot_table(index='card', columns=['trans_month', 'auth'],values='order_number', aggfunc='count')
+print(df1)
+
+trans_month 2017-11      2017-12     
+auth              A    D       A    D
+card                                 
+Amex            1.0  NaN     NaN  3.0
+MC              NaN  NaN     1.0  NaN
+Visa            2.0  1.0     1.0  NaN
+
+# add two more columns to level-1 on columns for each level-0 entry
+midx = pd.MultiIndex.from_product([df1.columns.levels[0], [*df1.columns.levels[1], 'total', 'pct']])
+print(midx)
+
+MultiIndex(levels=[['2017-11', '2017-12'], ['A', 'D', 'pct', 'total']],
+           labels=[[0, 0, 0, 0, 1, 1, 1, 1], [0, 1, 3, 2, 0, 1, 3, 2]])
+
+# reindex on the column level
+df1 = df1.reindex(midx, axis=1)
+print(df1)
+
+     2017-11                2017-12               
+           A    D total pct       A    D total pct
+card                                              
+Amex     1.0  NaN   NaN NaN     NaN  3.0   NaN NaN
+MC       NaN  NaN   NaN NaN     1.0  NaN   NaN NaN
+Visa     2.0  1.0   NaN NaN     1.0  NaN   NaN NaN
+
+# adding calculated field-1: 'total'
+df1.loc[:,(slice(None),'total')] = df1.groupby(level=[0], axis=1).sum().values
+
+# adding calculated field-2: auth-rate(A / total)
+df1.loc[:,(slice(None),'pct')] = df1.groupby(level=[0], axis=1) \
+                                    .apply(lambda x: x.loc[:,(slice(None),'A')].values / x.loc[:,(slice(None),'total')].values) \
+                                    .values
+
+# print the resultset
+print(df1)
+
+     2017-11                      2017-12                
+           A    D total       pct       A    D total  pct
+card                                                     
+Amex     1.0  NaN   1.0  1.000000     NaN  3.0   3.0  NaN
+MC       NaN  NaN   0.0       NaN     1.0  NaN   1.0  1.0
+Visa     2.0  1.0   3.0  0.666667     1.0  NaN   1.0  1.0
+```
+
+**Note:** There are issues on multiIndex alignment to assign calculated fields after running groupby(). 
+Using `values` attribute to convert dataframe into numpy.ndarray can bypass this issue.
+
+REF: 
+[1] [Pandas groupby 0 value if does not exist](https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885)
+[2] [Calculated Columns in Multiindex](https://stackoverflow.com/questions/50750189/calculated-columns-in-multiindex/50753435#50753435)
