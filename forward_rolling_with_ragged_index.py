@@ -123,7 +123,6 @@ print(df2)
 # Note: left key must be in monotonically incresing order. 
 df3 = pd.merge_asof(df, df1, left_on='dt_new', right_index=True, direction='nearest')
 
-
 """
 **Some Notes:**
 
@@ -133,9 +132,8 @@ df3 = pd.merge_asof(df, df1, left_on='dt_new', right_index=True, direction='near
   closed = left. (you might have different design though). When the window size is a fixed 
   number, the deault closed is 'both'.
 
-+ The index (dtime field) should not contain duplicates, if not, idx should be de-duplicated 
-  based on two fields (dtime, value) <-- [UPDATE]: this is not enough if `value` also the same
-  you will need extra logic to prevent the original rows discarded by accident.
++ reindex() will fail if any duplicates exist in index, it raises 
+  `ValueError: cannot reindex from a duplicate axis`
 
 **Potential issues:**
 
@@ -143,5 +141,8 @@ df3 = pd.merge_asof(df, df1, left_on='dt_new', right_index=True, direction='near
 + Join dataframes by using a datetime field, this might not work on every system if the datetimes 
   are saved as floating number. **Note:** this issue can be resolved by using pd.merge_asof() 
   with the option direction='nearest'
+
+** Another approach from stackoverflow **
++ https://stackoverflow.com/questions/50775083/python-vectorized-difference-of-dates-in-1-million-row-table
 """
 
