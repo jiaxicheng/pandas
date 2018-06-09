@@ -98,12 +98,13 @@ MC       NaN  NaN   NaN NaN     1.0  NaN   NaN NaN
 Visa     2.0  1.0   NaN NaN     1.0  NaN   NaN NaN
 
 # adding calculated field-1: 'total'
-df1.loc[:,(slice(None),'total')] = df1.groupby(level=[0], axis=1).sum().values
+#df1.loc[:,(slice(None),'total')] = df1.groupby(level=[0], axis=1).sum().values
+df1.loc(1)[:,'total'] = df1.groupby(level=0, axis=1).sum().values
 
 # adding calculated field-2: auth-rate(A / total)
-df1.loc[:,(slice(None),'pct')] = df1.groupby(level=[0], axis=1) \
-                                    .apply(lambda x: x.loc[:,(slice(None),'A')].values / x.loc[:,(slice(None),'total')].values) \
-                                    .values
+df1.loc(1)[:,'pct'] = df1.groupby(level=0, axis=1) \
+                         .apply(lambda x: x.loc(1)[:,'A'].values / x.loc(1)[:,'total'].values)\
+                         .values
 
 # print the resultset
 print(df1)
@@ -115,10 +116,61 @@ Amex     1.0  NaN   1.0  1.000000     NaN  3.0   3.0  NaN
 MC       NaN  NaN   0.0       NaN     1.0  NaN   1.0  1.0
 Visa     2.0  1.0   3.0  0.666667     1.0  NaN   1.0  1.0
 ```
-
 **Note:** There are issues on multiIndex alignment to assign calculated fields after running groupby(). 
 Using `values` attribute to convert dataframe into numpy.ndarray can bypass this issue.
 
-REF: 
-[1] [Pandas groupby 0 value if does not exist](https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885)
-[2] [Calculated Columns in Multiindex](https://stackoverflow.com/questions/50750189/calculated-columns-in-multiindex/50753435#50753435)
+### Improvement: ###
+
+Calculating the common descriptive stats directly on `df1` will have issue when you need
+'subtotal', 'mean', 'size', 'std' etc. in the same reports, in such case, you will need a separate 
+dataframe to save these intermediate values:
+
+(1) create a new EMPTY dataframe containing all new columns and the same row index with `df1`
+```
+idx = pd.MultiIndex.from_product([df1.columns.levels[0], ['subtotal', 'avg', 'count', 'pct']], names=df1.columns.names)
+df2 = pd.DataFrame(columns=idx, index=df1.index)
+print(df2)
+trans_month  2017-11                  2017-12                
+auth        subtotal  avg count  pct subtotal  avg count  pct
+card                                                         
+Amex             NaN  NaN   NaN  NaN      NaN  NaN   NaN  NaN
+MC               NaN  NaN   NaN  NaN      NaN  NaN   NaN  NaN
+Visa             NaN  NaN   NaN  NaN      NaN  NaN   NaN  NaN
+```
+
+(2) calculate the descriptive stats from `df1`
+```
+df2.loc(1)[:,'subtotal'] = df1.groupby(level=0, axis=1).agg('sum').values
+df2.loc(1)[:,'avg']      = df1.groupby(level=0, axis=1).agg('mean').values
+df2.loc(1)[:,'count']    = df1.groupby(level=0, axis=1).agg('size').values
+```
+
+(3) join `df2` with `df1` and assign the result to `df3`: (sort the result on columns)
+```
+df3 = df1.join(df2).sort_index(1)
+```
+
+(4) calculate `pct` which needs values from both original `df1` and calculated `df2`
+```
+df3.loc(1)[:,'pct'] = df3.groupby(level=0, axis=1)\
+                         .apply(lambda x: x.loc(1)[:,'A'].values/x.loc(1)[:,'subtotal'].values) \
+                         .values
+print(df3)
+trans_month 2017-11                                    2017-12                              
+auth              A    D  avg count       pct subtotal       A    D  avg count  pct subtotal
+card                                                                                        
+Amex            1.0  NaN  1.0     2  1.000000      1.0     NaN  3.0  3.0     2  NaN      3.0
+MC              NaN  NaN  NaN     2       NaN      0.0     1.0  NaN  1.0     2  1.0      1.0
+Visa            2.0  1.0  1.5     2  0.666667      3.0     1.0  NaN  1.0     2  1.0      1.0
+```
+
+**Note:** if you need the level-1 columns to be sorted in a specific order, then use reindex, for example:
+```
+midx = pd.MultiIndex.from_product([df1.columns.levels[0], [*df1.columns.levels[1], 'subtotal', 'pct', 'avg', 'count']])
+df3.reindex(midx)
+```
+
+Reference: 
+
+1. [Pandas groupby 0 value if does not exist](https://stackoverflow.com/questions/50078524/pandas-groupby-0-value-if-does-not-exist/50080885#50080885)
+2. [Calculated Columns in Multiindex](https://stackoverflow.com/questions/50750189/calculated-columns-in-multiindex/50753435#50753435)
