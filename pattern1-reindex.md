@@ -36,6 +36,48 @@ a user-predefined `category` type, for example:
     df['field'] = df['field'].astype(ctype)
 ```
 
+## Partial Indices realignment 
+
+For a data frame like the following, to expand level-2 index(year) to include all
+covered years while keeping level-1 untouched.
+```
+print(df)
+                index  qty
+city code year            
+hyd  1    2016  0      10 
+          2017  4      10 
+     2    2016  1      12 
+          2018  8      10 
+     3    2017  5      12 
+     4    2018  9      10 
+     6    2018  10     12 
+pune 1    2017  6      15 
+          2018  11     15 
+     2    2016  2      15 
+          2017  7      25 
+     4    2016  3      25 
+          2018  12     25 
+
+# expand indices only on the level-2(year), to create multi-Index:
+midx = pd.MultiIndex.from_tuples([ (z[0], z[1], k) for z in df.index for k in df.index.levels[2] ])
+df1 = df.reindex(midx)
+```
+
+Some useful information:
++ df.index return a list of tuples on all levels of indices, we can use this
+  to rebuild the new indices.
++ use pd.MultiIndex.from_tuples() to create multi-index
++ check Ref-[3] where we can use the same notation to filter out rows. for example we want to
+  get rows with city and code in the lst = [ ('hyd', 2), ('pune', 4) ], then we can do the following:
+```
+    df.loc(0)[[ z for z in df.index if (z[0], z[1]) in lst ]]
+```
++ to get all level-1 and level2 combos:
+```
+  lst = { (z[0], z[1]) for z in df.index }
+```
+
+
 **Limitations:**
 
 + index could not contain duplicate values, otherwise, a ValueError will be raised!
