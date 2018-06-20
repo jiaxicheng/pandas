@@ -59,7 +59,14 @@ pune 1    2017  6      15
           2018  12     25 
 
 # expand indices only on the level-2(year), to create multi-Index:
-midx = pd.MultiIndex.from_tuples([ (z[0], z[1], k) for z in df.index for k in df.index.levels[2] ])
+# pd.unique can be used to remove duplicated level-3 entries
+midx = pd.MultiIndex.from_tuples(pd.unique([ (z[0], z[1], k) for z in df.index for k in df.index.levels[2] ]))
+
+# below a little better than the above one
+#midx = pd.MultiIndex.from_tuples([ 
+#    (*i, j) for i in pd.unique([(z[0], z[1]) for z in df.index]) for j in df.index.levels[2] 
+#])
+
 df1 = df.reindex(midx)
 ```
 
