@@ -1,0 +1,232 @@
+Some use cases for Series.str.extractall() and Series.str.findall()
+---
+
+For pandas 0.18.0+, Series.str.extractall() can be very useful in extracting
+information using regex and setting the resulting capturing groups directly into columns.
+Using named capturing groups can help specify the column names.
+
+https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.extractall.html
+
+An example from stackoverflow post:
+https://stackoverflow.com/questions/56060109/capturing-numbers-in-a-string-and-storing-in-data-frame-in-python/56063556#56063556
+
+    # list of concerned atoms 
+    atoms = ['C', 'H', 'O', 'N', 'Cl','S','Br']
+
+    # regeex pattern
+    atom_ptn = r'(?P<atom>' + r'|'.join(atoms) + r')(?P<cnt>\d+)'
+    print(atom_ptn)
+    #(?P<atom>C|H|O|N|Cl|S|Br)(?P<cnt>\d+)
+
+    df = pd.DataFrame([('C55H85N17O25S4',),('C23H65',),(None,), (None,), ('C22H16ClN3OS2',)
+             , ('C37H42Cl2N2O6',), ('C21H30BrNO4',), ('C11H13ClN2',), ('C34H53NaO8',), ('A0',) 
+        ],columns=['molecular_formula'])
+
+#########################################################
+One way is to use Series.str.extractall()
+#########################################################
+
+Lets check the result from running extractall():
+
+    df.molecular_formula.str.extractall(atom_ptn)
+    #        atom cnt
+    #  match         
+    #0 0        C  55
+    #  1        H  85
+    #  2        N  17
+    #  3        O  25
+    #  4        S   4
+    #1 0        C  23
+    #  1        H  65
+    #4 0        C  22
+    #  1        H  16
+    #  2        N   3
+    #  3        S   2
+    #5 0        C  37
+    #  1        H  42
+    #  2       Cl   2
+    #  3        N   2
+    #  4        O   6
+    #6 0        C  21
+    #  1        H  30
+    #  2        O   4
+    #7 0        C  11
+    #  1        H  13
+    #  2        N   2
+    #8 0        C  34
+    #  1        H  53
+    #  2        O   8
+
+What we get:
+(1) The result from extractall() is a `DataFrame` with matched capturing groups as columns.
+(2) The matched capturing groups were exploded into rows with two levels of indeices, level-0 
+    is the row index from the original df, level-1 is the matched capturing group number.
+(3) Named capturing groups are very useful which can be used to set up the column names.
+    By default, the column names will be '0', '1', and '2' etc.
+
+To rereieve what we want, we will need to unstack() and reindex():
+
+    df1 = df.molecular_formula.str.extractall(atom_ptn) \
+            .reset_index(level=1, drop=True) \
+            .set_index('atom', append=True) \
+            .unstack(1)
+    
+    df1.columns = [ c[1] for c in df1.columns ]
+    
+    df.join(df1.reindex(columns=atoms)).fillna({c:0 for c in atoms}, downcast='infer') 
+    #  molecular_formula   C   H   O   N Cl  S  Br
+    #0    C55H85N17O25S4  55  85  25  17  0  4   0
+    #1            C23H65  23  65   0   0  0  0   0
+    #2              None   0   0   0   0  0  0   0
+    #3              None   0   0   0   0  0  0   0
+    #4     C22H16ClN3OS2  22  16   0   3  0  2   0
+    #5     C37H42Cl2N2O6  37  42   6   2  2  0   0
+    #6       C21H30BrNO4  21  30   4   0  0  0   0
+    #7        C11H13ClN2  11  13   0   2  0  0   0
+    #8        C34H53NaO8  34  53   8   0  0  0   0
+    #9                A0   0   0   0   0  0  0   0
+
+There are cases when the 'cnt' is missing, the above regex will skip such atoms and specify cnt=0
+by fillna(0). There are two more possible result you might want. given an example as shown in index=6
+`BrNO4`, there are 3 atoms, `Br`, `N` and `O` the cnt for `O` is 4, but the cnt for `Br` and `N` are missing:
+(1) specify a default value i.e. cnt = 1 for any atoms with missing cnt, thus we have Br=1, N=1 and O=4
+(2) use the next atom with a valid 'cnt', i.e. `BrNO4` will have Br=4, N=4 and O=4, similar to a bfill() case.
+
+For both cases, we need to modify the regex:
+  * `cnt` should allow EMPTY string, thus: from `(?P<cnt>\d+)` to `(?P<cnt>\d*)` 
+  * `atom` must be sorted so that longer string matches before shorter ones, this is important 
+    how regex engine works
+
+        # sort the list of atoms based on their length
+        atoms_sorted = sorted(atoms, key=len, reverse=True)
+
+        # the new pattern based on list of atoms_sorted and \d* on cnt
+        atom_ptn = r'(?P<atom>' + r'|'.join(atoms_sorted) + r')(?P<cnt>\d*)'
+        print(atom_ptn)
+        #(?P<atom>Cl|Br|C|H|O|N|S)(?P<cnt>\d*)
+
+For case-1, the new regex pattern will return the atoms with missing cnt as NaN, we will need to fillna(1) to setup them to the default value of 1
+    df1 = df.molecular_formula.str.extractall(atom_ptn) \
+            .fillna(1) \
+            .reset_index(level=1, drop=True) \
+            .set_index('atom', append=True) \
+            .unstack(1)
+
+    df1.columns = [ c[1] for c in df1.columns ]
+
+    df.join(df1.reindex(columns=atoms)).fillna({c:0 for c in atoms}, downcast='infer')
+
+    #  molecular_formula   C   H   O   N Cl  S Br
+    #0    C55H85N17O25S4  55  85  25  17  0  4  0
+    #1            C23H65  23  65   0   0  0  0  0
+    #2              None   0   0   0   0  0  0  0
+    #3              None   0   0   0   0  0  0  0
+    #4     C22H16ClN3OS2  22  16   1   3  1  2  0
+    #5     C37H42Cl2N2O6  37  42   6   2  2  0  0
+    #6       C21H30BrNO4  21  30   4   1  0  0  1
+    #7        C11H13ClN2  11  13   0   2  1  0  0
+    #8        C34H53NaO8  34  53   8   1  0  0  0
+    #9                A0   0   0   0   0  0  0  0
+
+
+For case-2, we can groupby level=1 and the use bfill()
+
+    df1 = df.molecular_formula.str.extractall(atom_ptn) \
+            .reset_index(level=1, drop=True) \
+            .groupby(level=0).bfill()[['atom','cnt']] \
+            .set_index('atom', append=True) \
+            .unstack(1)
+
+    #  molecular_formula   C   H   O   N Cl  S Br
+    #0    C55H85N17O25S4  55  85  25  17  0  4  0
+    #1            C23H65  23  65   0   0  0  0  0
+    #2              None   0   0   0   0  0  0  0
+    #3              None   0   0   0   0  0  0  0
+    #4     C22H16ClN3OS2  22  16   2   3  3  2  0
+    #5     C37H42Cl2N2O6  37  42   6   2  2  0  0
+    #6       C21H30BrNO4  21  30   4   4  0  0  4
+    #7        C11H13ClN2  11  13   0   2  2  0  0
+    #8        C34H53NaO8  34  53   8   8  0  0  0
+    #9                A0   0   0   0   0  0  0  0
+
+Note: with Pandas 0.24.0+, we can use DataFrame.droplevel() to adjust the multiIndex on column/index levels, thus the above operations can be simplified with one method chaining:
+
+       df.join(df.molecular_formula.str.extractall(atom_ptn)
+                  .fillna(1)
+                  .droplevel(1)
+                  .set_index('atom', append=True)
+                  .unstack(1)
+                  .droplevel(0, axis=1)
+                  .reindex(columns=atoms)
+           ).fillna({c:0 for c in atoms}, downcast='infer')
+
+
+#########################################################
+Another way is to use Series.str.findall():
+#########################################################
+
+    df.molecular_formula.str.findall(atom_ptn)                                                                         
+    #Out[244]: 
+    #0         [(C, 55), (H, 85), (N, 17), (O, 25), (S, 4)]
+    #1                                   [(C, 23), (H, 65)]
+    #2                                                 None
+    #3                                                 None
+    #4    [(C, 22), (H, 16), (Cl, ), (N, 3), (O, ), (S, 2)]
+    #5          [(C, 37), (H, 42), (Cl, 2), (N, 2), (O, 6)]
+    #6            [(C, 21), (H, 30), (Br, ), (N, ), (O, 4)]
+    #7                   [(C, 11), (H, 13), (Cl, ), (N, 2)]
+    #8                    [(C, 34), (H, 53), (N, ), (O, 8)]
+    #9                                                   []
+
+What we get:
+(1) The result from findall() is a Series
+(2) Named capturing groups are not useful, the names are simply discarded
+(3) The matched groups are saved in the same row as list of tuples, we will have
+    to manually explode them into rows.
+
+We can then use list comprehension and DataFrame constructor to create df1
+
+    df1 = pd.DataFrame(
+          [ (i, vs[0], vs[1]) for i,d in zip(s.index, s.values) if type(d) is list for vs in d ]
+        , columns=['idx', 'atom', 'cnt']
+    ).set_index('idx').replace('', np.nan)
+    print(df1)
+    #    atom  cnt
+    #idx          
+    #0      C   55
+    #0      H   85
+    #0      N   17
+    #0      O   25
+    #0      S    4
+    #1      C   23
+    #1      H   65
+    #4      C   22
+    #4      H   16
+    #4     Cl  NaN
+    #4      N    3
+    #4      O  NaN
+    #4      S    2
+    #5      C   37
+    #5      H   42
+    #5     Cl    2
+    #5      N    2
+    #5      O    6
+    #6      C   21
+    #6      H   30
+    #6     Br  NaN
+    #6      N  NaN
+    #6      O    4
+    #7      C   11
+    #7      H   13
+    #7     Cl  NaN
+    #7      N    2
+    #8      C   34
+    #8      H   53
+    #8      N  NaN
+    #8      O    8
+
+Note: We can also then use apply + stack + apply to transform this Series into DataFrame df1, but
+this method is less slow and shuold be avoided:
+
+    df.molecular_formula.str.findall(atom_ptn).apply(pd.Series).stack().apply(pd.Series)
+
